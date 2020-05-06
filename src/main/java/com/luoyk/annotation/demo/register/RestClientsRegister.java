@@ -3,12 +3,14 @@ package com.luoyk.annotation.demo.register;
 import com.luoyk.annotation.demo.anno.EnableRestClients;
 import com.luoyk.annotation.demo.anno.RestClient;
 import com.luoyk.annotation.demo.bean.RestFactoryBean;
+import com.luoyk.annotation.demo.handler.CGLibHandler;
 import com.luoyk.annotation.demo.handler.JdkHandler;
 import org.springframework.beans.factory.annotation.AnnotatedBeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanNameGenerator;
+import org.springframework.cglib.proxy.Enhancer;
 import org.springframework.context.EnvironmentAware;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
@@ -99,19 +101,8 @@ public class RestClientsRegister implements ImportBeanDefinitionRegistrar, Resou
         try {
             //通过接口名找到该接口类
             Class<?> aClass = Class.forName(className);
-            //创建jdk代理处理程序
-            JdkHandler jdkHandler = new JdkHandler();
 
-            /*
-             * 生成代理对象
-             * 第一个参数传入一个ClassLoader
-             * 第二个参数传入被代理的接口，是一个数组，
-             * 这意味着你可以用一个代理对象去实现多个接口
-             * 第三个参数是代理处理程序
-             */
-            Object object = Proxy.newProxyInstance(aClass.getClassLoader(),
-                    new Class[]{aClass},
-                    jdkHandler);
+            Object object = true ? jdkProxy(aClass) : cglibProxy(aClass);
 
             //以类名首字母小写作为注册bean的名称
             String simpleName = aClass.getSimpleName();
@@ -128,6 +119,36 @@ public class RestClientsRegister implements ImportBeanDefinitionRegistrar, Resou
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
+    }
+
+    public Object jdkProxy(Class<?> aClass) {
+        //创建jdk代理处理程序
+        JdkHandler jdkHandler = new JdkHandler();
+        /*
+         * 生成代理对象
+         * 第一个参数传入一个ClassLoader
+         * 第二个参数传入被代理的接口，是一个数组，
+         * 这意味着你可以用一个代理对象去实现多个接口
+         * 第三个参数是代理处理程序
+         */
+        return Proxy.newProxyInstance(aClass.getClassLoader(),
+                new Class[]{aClass},
+                jdkHandler);
+    }
+
+    public Object cglibProxy(Class<?> aClass) {
+
+        //创建CGLib代理程序
+        CGLibHandler cgLibHandler = new CGLibHandler();
+
+        //创建增强对象
+        Enhancer enhancer = new Enhancer();
+        //设置增强对象所继承的类
+        enhancer.setSuperclass(aClass);
+        //设置控制类
+        enhancer.setCallback(cgLibHandler);
+        //创建代理对象
+        return enhancer.create();
     }
 
     @Override

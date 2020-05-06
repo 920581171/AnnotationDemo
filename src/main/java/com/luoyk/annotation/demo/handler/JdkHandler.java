@@ -5,7 +5,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 
 /**
- * 代理类处理程序
+ * jdk代理类处理程序
  *
  * @author 92058
  */
